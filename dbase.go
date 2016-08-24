@@ -1,17 +1,18 @@
 package dbase
 
 import (
-	"fmt"
+	"encoding/hex"
+	"os"
+	"path"
 )
 
 type lockMessage struct {
-	doLock bool
-	ls     string
-	ch     chan bool
+	k  string
+	ch chan bool
 }
 
 type lockQItem struct {
-	m          lockMessage
+	ch         chan bool
 	next, last *lockQItem
 }
 
@@ -26,12 +27,41 @@ func beginLocker() Locker {
 	ch := make(Locker)
 
 	go func() {
-		q := make(map[string]lockQItem, 0)
-		locks := make(map[string]bool, 0)
+		q := make(map[string]*lockQItem, 0)
 		for {
 			req := <-ch
+			qTop, ok := q[req.k]
 
-			cl := l
+			if req.ch != nil {
+				//locking
+				if !ok {
+					req.ch <- true
+					q[req.k] = &lockQItem{req.ch, nil, nil}
+					continue
+				}
+				newItem := &lockQItem{req.ch, nil, nil}
+				last := qTop.last
+				if last == nil {
+					last = qTop
+				}
+				last.next = newItem
+				qTop.last = newItem
+
+			} else {
+				//unlocking
+				if !ok {
+					//ERROR tried to unlock something not locked
+					continue
+				}
+				next := qTop.next
+				if next != nil {
+					next.ch <- true
+					next.last = qTop.last
+					q[req.k] = next
+				} else {
+					delete(q, req.k)
+				}
+			}
 
 		}
 
@@ -39,15 +69,62 @@ func beginLocker() Locker {
 	return ch
 }
 
+func (l Locker) Lock(s string) {
+	ch := make(chan bool)
+	l <- lockMessage{s, ch}
+	_ = <-ch
+}
+
+func (l Locker) Unlock(s string) {
+	l <- lockMessage{s, nil}
+}
+
 func NewDB(root string) *DBase {
 	return &DBase{root, beginLocker()}
 }
 
-func (db DBase) WriteMap(key string, val []byte) {
-	_ = fmt.Sprintf("%x", []byte(key))
+//Returns Bool OK true on success, false on fail
+func (db DBase) WriteMap(key string, val []byte, hasLock bool) bool {
+	hexkey := hex.EncodeToString([]byte(key))
+	fname := path.Join(db.root, hexkey)
+	if !hasLock {
+		db.locker.Lock(fname)
+	}
+	defer db.locker.Unlock(fname)
+	f, err := os.Create(fname)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+
+	f.Write(val)
+
+	return true
 }
 
-func (db DBase) ReadMap(key string) []byte {
-	_ = fmt.Sprintf("%x", []byte(key))
-	return nil
+func (db DBase) ReadMap(key string, holdLock bool) []byte {
+	hexkey := hex.EncodeToString([]byte(key))
+	fname := path.Join(db.root, hexkey)
+	db.locker.Lock(fname)
+	if !holdLock {
+		defer db.locker.Unlock(fname)
+	}
+	f, err := os.Open(fname)
+	defer f.Close()
+	if err != nil {
+		return nil
+	}
+
+	res := make([]byte, 0)
+	buf := make([]byte, 1024)
+	for {
+		count, _ := f.Read(buf)
+		res = append(res, buf[:count]...)
+		if count < 1024 {
+			return res
+		}
+		f.Seek(int64(count), os.SEEK_CUR)
+
+	}
+
 }
