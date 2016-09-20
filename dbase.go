@@ -18,10 +18,7 @@ type lockQItem struct {
 
 type Locker chan lockMessage
 
-type DBase struct {
-	root   string
-	locker Locker
-}
+type DBase string
 
 func beginLocker() Locker {
 	ch := make(Locker)
@@ -79,18 +76,21 @@ func (l Locker) Unlock(s string) {
 	l <- lockMessage{s, nil}
 }
 
-func NewDB(root string) *DBase {
-	return &DBase{root, beginLocker()}
+func newDB(root string) *DBase {
+
+	return *DBase(&root)
 }
+
+/*TODO make Locking Version
+func NewDB(root string, lock bool) *DBase {
+
+	return &DBase{root, beginLocker()}
+}*/
 
 //Returns Bool OK true on success, false on fail
 func (db DBase) WriteMap(key string, val []byte, hasLock bool) bool {
 	hexkey := hex.EncodeToString([]byte(key))
-	fname := path.Join(db.root, hexkey)
-	if !hasLock {
-		db.locker.Lock(fname)
-	}
-	defer db.locker.Unlock(fname)
+	fname := path.Join(db, hexkey)
 	f, err := os.Create(fname)
 	if err != nil {
 		return false
@@ -102,13 +102,10 @@ func (db DBase) WriteMap(key string, val []byte, hasLock bool) bool {
 	return true
 }
 
-func (db DBase) ReadMap(key string, holdLock bool) []byte {
+func (db DBase) ReadMap(key string) []byte {
 	hexkey := hex.EncodeToString([]byte(key))
 	fname := path.Join(db.root, hexkey)
-	db.locker.Lock(fname)
-	if !holdLock {
-		defer db.locker.Unlock(fname)
-	}
+
 	f, err := os.Open(fname)
 	defer f.Close()
 	if err != nil {
