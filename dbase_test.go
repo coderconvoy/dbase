@@ -48,3 +48,10 @@ func TestSaveLoad(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestLockedDBIncrements(t *testing.T) {
+	db := NewLockDMapper(NewDBase("dbase_testdata/t2"))
+	for i = 0; i < 100; i++ {
+
+	}
+}

@@ -6,11 +6,6 @@ import (
 	"path"
 )
 
-type DMapper interface {
-	ReadMap(k string) []byte
-	WriteMap(k string, v []byte)
-}
-
 type DBase string
 
 func NewDBase(s string) *DBase {
@@ -24,7 +19,7 @@ func NewDB(root string, lock bool) *DBase {
 	return &DBase{root, beginLocker()}
 }*/
 
-//Returns Bool OK true on success, false on fail
+//WriteMap Returns Bool OK true on success, false on fail
 func (db DBase) WriteMap(key string, val []byte) bool {
 	s := string(db)
 	hexkey := hex.EncodeToString([]byte(key))
@@ -40,6 +35,8 @@ func (db DBase) WriteMap(key string, val []byte) bool {
 	return true
 }
 
+//ReadMap Takes a key and tries to find the result returns
+//nil on empty
 func (db DBase) ReadMap(key string) []byte {
 	hexkey := hex.EncodeToString([]byte(key))
 	fname := path.Join(string(db), hexkey)

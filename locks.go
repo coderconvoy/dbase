@@ -1,5 +1,15 @@
 package dbase
 
+type DMapper interface {
+	ReadMap(k string) []byte
+	WriteMap(k string, v []byte)
+}
+
+type LockDMaper struct {
+	db DMapper
+	l  Locker
+}
+
 type lockMessage struct {
 	k  string
 	ch chan bool
@@ -66,4 +76,30 @@ func BeginLocker() Locker {
 
 	}()
 	return ch
+}
+
+// NewLockDMapper returns a wrapper which will maintain locks tidily for any DMapper
+func NewLockDMapper(m DMapper) *LockDMapper {
+	return &LockDMapper{m, BeginLocker()}
+}
+
+func (self *LockDMapper) Read(k string, holdLock bool) []byte {
+	self.l.Lock(k)
+	if !holdLock {
+		defer self.l.Unlock(k)
+	}
+	return self.db.ReadMap(k)
+
+}
+
+func (self *LockDMapper) Write(k string, v []byte, hasLock bool) {
+	if !hasLock {
+		self.l.Lock(k)
+	}
+	defer self.l.Unlock(k)
+	self.db.WriteMap(k, v)
+}
+
+func (self *LockDMapper) Release(k string) {
+	self.l.Unlock(k)
 }
