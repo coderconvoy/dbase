@@ -8,7 +8,7 @@ import (
 )
 
 func TestLock(t *testing.T) {
-	locker := beginLocker()
+	locker := BeginLocker()
 
 	locker.Lock("Hello")
 
@@ -19,7 +19,7 @@ func TestLock(t *testing.T) {
 }
 
 func TestLong(t *testing.T) {
-	locker := beginLocker()
+	locker := BeginLocker()
 	ch := make(chan bool)
 	for i := 0; i < 10; i++ {
 		go func(n int) {
@@ -41,9 +41,9 @@ func TestLong(t *testing.T) {
 func TestSaveLoad(t *testing.T) {
 	k := "KEY"
 	b := []byte("VALUE")
-	db := NewDB("dbase_testdata/t1")
-	db.WriteMap(k, b, false)
-	b2 := db.ReadMap(k, false)
+	db := NewDBase("dbase_testdata/t1")
+	db.WriteMap(k, b)
+	b2 := db.ReadMap(k)
 	if bytes.Compare(b, b2) != 0 {
 		t.Fail()
 	}

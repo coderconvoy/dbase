@@ -11,9 +11,12 @@ type DMapper interface {
 	WriteMap(k string, v []byte)
 }
 
-type Locker chan lockMessage
-
 type DBase string
+
+func NewDBase(s string) *DBase {
+	res := DBase(s)
+	return &res
+}
 
 /*TODO make Locking Version
 func NewDB(root string, lock bool) *DBase {
@@ -23,8 +26,9 @@ func NewDB(root string, lock bool) *DBase {
 
 //Returns Bool OK true on success, false on fail
 func (db DBase) WriteMap(key string, val []byte) bool {
+	s := string(db)
 	hexkey := hex.EncodeToString([]byte(key))
-	fname := path.Join(db, hexkey)
+	fname := path.Join(s, hexkey)
 	f, err := os.Create(fname)
 	if err != nil {
 		return false
@@ -38,7 +42,7 @@ func (db DBase) WriteMap(key string, val []byte) bool {
 
 func (db DBase) ReadMap(key string) []byte {
 	hexkey := hex.EncodeToString([]byte(key))
-	fname := path.Join(db.root, hexkey)
+	fname := path.Join(string(db), hexkey)
 
 	f, err := os.Open(fname)
 	defer f.Close()

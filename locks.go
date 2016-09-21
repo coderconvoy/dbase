@@ -22,7 +22,7 @@ func (l Locker) Unlock(s string) {
 	l <- lockMessage{s, nil}
 }
 
-func beginLocker() Locker {
+func BeginLocker() Locker {
 	ch := make(Locker)
 
 	go func() {
