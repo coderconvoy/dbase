@@ -3,6 +3,7 @@ package dbase
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -51,7 +52,34 @@ func TestSaveLoad(t *testing.T) {
 
 func TestLockedDBIncrements(t *testing.T) {
 	db := NewLockDMapper(NewDBase("dbase_testdata/t2"))
-	for i = 0; i < 100; i++ {
 
+	ch := make(chan bool)
+
+	for i := 0; i < 100; i++ {
+		go func(n int) {
+			time.Sleep(100)
+			a := db.Read("Poop", true)
+			//time.Sleep(10)
+			b := 0
+			if a != nil {
+				as := string(a)
+				var err error
+				b, err = strconv.Atoi(as)
+
+				if err != nil {
+					println(err)
+				}
+			}
+			c := b + n
+			fmt.Printf("%d + %d = %d\n", b, n, c)
+			db.Write("Poop", []byte(strconv.Itoa(c)), true)
+			ch <- true
+
+		}(i)
+
+	}
+
+	for i := 0; i < 100; i++ {
+		_ = <-ch
 	}
 }

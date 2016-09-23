@@ -5,7 +5,7 @@ type DMapper interface {
 	WriteMap(k string, v []byte)
 }
 
-type LockDMaper struct {
+type LockDMapper struct {
 	db DMapper
 	l  Locker
 }

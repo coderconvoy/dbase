@@ -1,7 +1,7 @@
 package dbase
 
 type CacheDB struct {
-	db      DBase
+	db      *DBase
 	cache   map[string][]byte
 	maxSize int
 }

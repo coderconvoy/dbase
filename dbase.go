@@ -20,19 +20,19 @@ func NewDB(root string, lock bool) *DBase {
 }*/
 
 //WriteMap Returns Bool OK true on success, false on fail
-func (db DBase) WriteMap(key string, val []byte) bool {
+func (db DBase) WriteMap(key string, val []byte) {
 	s := string(db)
 	hexkey := hex.EncodeToString([]byte(key))
 	fname := path.Join(s, hexkey)
 	f, err := os.Create(fname)
 	if err != nil {
-		return false
+		return
 	}
 	defer f.Close()
 
 	f.Write(val)
 
-	return true
+	return
 }
 
 //ReadMap Takes a key and tries to find the result returns
