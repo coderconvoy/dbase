@@ -1,105 +1,80 @@
 package dbase
 
-type DMapper interface {
-	ReadMap(k string) []byte
-	WriteMap(k string, v []byte)
-}
-
-type LockDMapper struct {
-	db DMapper
-	l  Locker
-}
-
 type lockMessage struct {
-	k  string
-	ch chan bool
-}
-
-type lockQItem struct {
-	ch         chan bool
-	next, last *lockQItem
+	k  []string
+	id uint64
+	ch chan uint64
 }
 
 type Locker chan lockMessage
 
-func (l Locker) Lock(s string) {
-	ch := make(chan bool)
-	l <- lockMessage{s, ch}
-	_ = <-ch
+func (l Locker) Lock(s ...string) uint64 {
+	ch := make(chan uint64)
+	l <- lockMessage{s, 0, ch}
+	return <-ch
 }
 
-func (l Locker) Unlock(s string) {
-	l <- lockMessage{s, nil}
+func (l Locker) Unlock(id uint64) {
+	l <- lockMessage{nil, id, nil}
 }
 
-func BeginLocker() Locker {
+func grabLock(id uint64, ks []string, mp map[string]uint64) (uint64, bool) {
+	for _, k := range ks {
+		_, cl := mp[k]
+		if cl {
+			return id, false
+		}
+	}
+	id++
+	for _, k := range ks {
+		mp[k] = id
+	}
+	return id, true
+}
+
+func NewLocker() Locker {
 	ch := make(Locker)
 
 	go func() {
-		q := make(map[string]*lockQItem, 0)
+		q := []lockMessage{}
+		locks := make(map[string]uint64)
+		cid := uint64(0)
 		for {
 			req := <-ch
-			qTop, ok := q[req.k]
 
 			if req.ch != nil {
 				//locking
-				if !ok {
-					req.ch <- true
-					q[req.k] = &lockQItem{req.ch, nil, nil}
+				var added bool
+				cid, added = grabLock(cid, req.k, locks)
+				if added {
+					req.ch <- cid
 					continue
 				}
-				newItem := &lockQItem{req.ch, nil, nil}
-				last := qTop.last
-				if last == nil {
-					last = qTop
-				}
-				last.next = newItem
-				qTop.last = newItem
+				q = append(q, req)
+				continue
+			}
 
-			} else {
-				//unlocking
-				if !ok {
-					//ERROR tried to unlock something not locked
-					continue
-				}
-				next := qTop.next
-				if next != nil {
-					next.ch <- true
-					next.last = qTop.last
-					q[req.k] = next
-				} else {
-					delete(q, req.k)
+			//unlocking
+			for i, k := range locks {
+				if k == req.id {
+					delete(locks, i)
 				}
 			}
+			//see what we can take out of the queue
+			newq := []lockMessage{}
+			for _, l := range q {
+				var added bool
+				cid, added = grabLock(cid, l.k, locks)
+				if added {
+					l.ch <- cid
+				} else {
+					newq = append(newq, l)
+				}
+			}
+			q = newq
 
 		}
 
 	}()
 	return ch
-}
-
-// NewLockDMapper returns a wrapper which will maintain locks tidily for any DMapper
-func NewLockDMapper(m DMapper) *LockDMapper {
-	return &LockDMapper{m, BeginLocker()}
-}
-
-func (self *LockDMapper) Read(k string, holdLock bool) []byte {
-	self.l.Lock(k)
-	if !holdLock {
-		defer self.l.Unlock(k)
-	}
-	return self.db.ReadMap(k)
-
-}
-
-func (self *LockDMapper) Write(k string, v []byte, hasLock bool) {
-	if !hasLock {
-		self.l.Lock(k)
-	}
-	defer self.l.Unlock(k)
-	self.db.WriteMap(k, v)
-}
-
-func (self *LockDMapper) Release(k string) {
-	self.l.Unlock(k)
 }

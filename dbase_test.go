@@ -1,94 +1,64 @@
 package dbase
 
 import (
-	"bytes"
-	"fmt"
-	"strconv"
 	"testing"
 	"time"
 )
 
 func TestLock(t *testing.T) {
-	locker := BeginLocker()
-
-	locker.Lock("Hello")
-
-	locker.Unlock("Hello")
-	locker.Lock("Hello")
-
-	locker.Unlock("Hello")
-}
-
-func TestLong(t *testing.T) {
-	locker := BeginLocker()
-	ch := make(chan bool)
-	for i := 0; i < 10; i++ {
-		go func(n int) {
-			locker.Lock("Hello")
-			fmt.Printf("Locked %d\n", n)
-			time.Sleep(time.Second / 10)
-			fmt.Printf("AllDone %d\n", n)
-			locker.Unlock("Hello")
-			ch <- true
-		}(i)
+	locker := NewLocker()
+	data := [][]string{
+		[]string{"a"},
+		[]string{"b", "c"},
+		[]string{"a", "c"},
+		[]string{"a", "b"},
 	}
+	mp := make(map[string]int)
+	mp["a"] = 0
+	mp["b"] = 0
+	mp["c"] = 0
 
-	for i := 0; i < 10; i++ {
-		_ = <-ch
-	}
+	ch := make(chan int)
 
-}
+	f := func(ss []string) {
+		id := locker.Lock(ss...)
+		n := 0
+		for _, s := range ss {
+			mp[s] = mp[s] + 1
+			n += mp[s]
+		}
+		time.Sleep(time.Second / 500)
 
-func TestSaveLoad(t *testing.T) {
-	k := "KEY"
-	b := []byte("VALUE")
-<<<<<<< HEAD
-	db := NewDB("dbase_testdata/t1")
-	db.WriteMap(k, b, false)
-	b2 := db.ReadMap(k, false)
-	if bytes.Compare(b, b2) != 0 {
-		t.Fail()
-	}
-=======
-	db := NewDBase("dbase_testdata/t1")
-	db.WriteMap(k, b)
-	b2 := db.ReadMap(k)
-	if bytes.Compare(b, b2) != 0 {
-		t.Fail()
-	}
-}
+		n2 := 0
+		for _, s := range ss {
+			n2 += mp[s]
+			mp[s] = mp[s] + 1
 
-func TestLockedDBIncrements(t *testing.T) {
-	db := NewLockDMapper(NewDBase("dbase_testdata/t2"))
-
-	ch := make(chan bool)
-
-	for i := 0; i < 100; i++ {
-		go func(n int) {
-			time.Sleep(100)
-			a := db.Read("Poop", true)
-			//time.Sleep(10)
-			b := 0
-			if a != nil {
-				as := string(a)
-				var err error
-				b, err = strconv.Atoi(as)
-
-				if err != nil {
-					println(err)
-				}
-			}
-			c := b + n
-			fmt.Printf("%d + %d = %d\n", b, n, c)
-			db.Write("Poop", []byte(strconv.Itoa(c)), true)
-			ch <- true
-
-		}(i)
-
+		}
+		if n2 != n {
+			t.Log("n2 != n")
+			t.Fail()
+		}
+		locker.Unlock(id)
+		ch <- len(ss) * 2
 	}
 
 	for i := 0; i < 100; i++ {
-		_ = <-ch
+		go f(data[i%len(data)])
 	}
->>>>>>> cf264fc0524646f19296a4c9e49a16fe028afa23
+
+	tot := 0
+	for i := 0; i < 100; i++ {
+		tot += <-ch
+	}
+
+	dtot := 0
+	for _, v := range mp {
+		dtot += v
+	}
+	if tot != dtot {
+		t.Logf("dtot != tot , %d != %d", dtot, tot)
+		t.Fail()
+	}
+
 }
