@@ -1,7 +1,7 @@
 package dbase
 
 import (
-	"encoding/hex"
+	"bytes"
 	"fmt"
 	"testing"
 	"time"
@@ -38,9 +38,13 @@ func TestLong(t *testing.T) {
 
 }
 
-func TestEncode(t *testing.T) {
-	s := []byte("Hello")
-	h := hex.EncodeToString(s)
-	n, _ := hex.DecodeString(h)
-	fmt.Println(string(n))
+func TestSaveLoad(t *testing.T) {
+	k := "KEY"
+	b := []byte("VALUE")
+	db := NewDB("dbase_testdata/t1")
+	db.WriteMap(k, b, false)
+	b2 := db.ReadMap(k, false)
+	if bytes.Compare(b, b2) != 0 {
+		t.Fail()
+	}
 }
