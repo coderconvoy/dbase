@@ -60,7 +60,7 @@ const (
 func (sc *SessionControl) GetLogin(w http.ResponseWriter, r *http.Request) (SessionData, int) {
 	c, err := r.Cookie("Session")
 	if err != nil {
-		return SessionData{}, false
+		return SessionData{}, NOLOGIN
 	}
 	sc.Lock()
 	defer sc.Unlock()
