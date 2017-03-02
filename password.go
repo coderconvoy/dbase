@@ -7,7 +7,7 @@ import (
 )
 
 type Password struct {
-	hash, salt []byte
+	Hash, Salt []byte
 }
 
 func NewPassword(pw string) (Password, error) {
@@ -21,9 +21,9 @@ func NewPassword(pw string) (Password, error) {
 
 }
 func (p Password) Check(pw string) bool {
-	dk, err := scrypt.Key([]byte(pw), p.salt, 16384, 8, 1, 32)
+	dk, err := scrypt.Key([]byte(pw), p.Salt, 16384, 8, 1, 32)
 	if err != nil {
 		return false
 	}
-	return string(dk) == string(p.hash)
+	return string(dk) == string(p.Hash)
 }
