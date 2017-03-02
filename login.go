@@ -57,7 +57,7 @@ const (
 	NOLOGIN
 )
 
-func (sc *SessionControl) GetLogin(w http.ResponseWriter, r *http.Request) (SessionData, bool) {
+func (sc *SessionControl) GetLogin(w http.ResponseWriter, r *http.Request) (SessionData, int) {
 	c, err := r.Cookie("Session")
 	if err != nil {
 		return SessionData{}, false
@@ -66,7 +66,7 @@ func (sc *SessionControl) GetLogin(w http.ResponseWriter, r *http.Request) (Sess
 	defer sc.Unlock()
 	dt, ok := sc.sessions[c.Value]
 	if !ok {
-		return dt, false
+		return dt, NOLOGIN
 	}
 	if time.Now().After(dt.LastAccess.Add(sc.MaxDuration)) {
 		http.SetCookie(w, &http.Cookie{
@@ -74,10 +74,12 @@ func (sc *SessionControl) GetLogin(w http.ResponseWriter, r *http.Request) (Sess
 			Value:   "None",
 			Expires: time.Now().Add(-time.Second),
 		})
-		return SessionData{}, false
+		return SessionData{}, TIMEOUT
 
 	}
-	return dt, true
+	dt.LastAccess = time.Now()
+	sc.sessions[c.Value] = dt
+	return dt, OK
 }
 
 func (sc *SessionControl) Logout(w http.ResponseWriter, r *http.Request) {
