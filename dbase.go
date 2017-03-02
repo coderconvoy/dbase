@@ -1,4 +1,4 @@
-package dbase
+package dbase2
 
 import (
 	"encoding/hex"
@@ -13,13 +13,13 @@ type DMapper interface {
 }
 
 type DBase struct {
-	root string
+	Root string
 }
 
 //Returns Bool OK true on success, false on fail
 func (db DBase) WriteMap(key string, val []byte) bool {
 	hexkey := hex.EncodeToString([]byte(key))
-	fname := path.Join(db.root, hexkey)
+	fname := path.Join(db.Root, hexkey)
 	f, err := os.Create(fname)
 	if err != nil {
 		return false
@@ -31,6 +31,6 @@ func (db DBase) WriteMap(key string, val []byte) bool {
 
 func (db DBase) ReadMap(key string) ([]byte, error) {
 	hexkey := hex.EncodeToString([]byte(key))
-	fname := path.Join(db.root, hexkey)
+	fname := path.Join(db.Root, hexkey)
 	return ioutil.ReadFile(fname)
 }

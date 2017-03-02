@@ -1,4 +1,4 @@
-package dbase
+package dbase2
 
 type lockMessage struct {
 	k  []string

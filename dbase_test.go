@@ -1,6 +1,7 @@
-package dbase
+package dbase2
 
 import (
+	"sync"
 	"testing"
 	"time"
 )
@@ -17,6 +18,7 @@ func TestLock(t *testing.T) {
 	mp["a"] = 0
 	mp["b"] = 0
 	mp["c"] = 0
+	mLock := sync.Mutex{}
 
 	ch := make(chan int)
 
@@ -24,15 +26,19 @@ func TestLock(t *testing.T) {
 		id := locker.Lock(ss...)
 		n := 0
 		for _, s := range ss {
+			mLock.Lock()
 			mp[s] = mp[s] + 1
 			n += mp[s]
+			mLock.Unlock()
 		}
 		time.Sleep(time.Second / 500)
 
 		n2 := 0
 		for _, s := range ss {
+			mLock.Lock()
 			n2 += mp[s]
 			mp[s] = mp[s] + 1
+			mLock.Unlock()
 
 		}
 		if n2 != n {
