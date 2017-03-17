@@ -31,7 +31,8 @@ var dlog Logger
 // If you want more fancy stuff, Use a LogGroup
 func QLog(m string) error {
 	if dlog == nil {
-		dlog, err := NewLogGroup("logs")
+		var err error
+		dlog, err = NewLogGroup("logs")
 		if err != nil {
 			return errors.Wrap(err, "Could not log")
 		}
@@ -51,9 +52,14 @@ func SetQLogFolder(f string) error {
 	return nil
 }
 
+// SetQLogger sets the default QLog method to use anything that fits the Log method, useful for quick debog options, etc
+func SetQLogger(l Logger) {
+	dlog = l
+}
+
 func NewFolderLog(f string) (*FolderLog, error) {
 
-	err := os.MkdirAll(f, 0664)
+	err := os.MkdirAll(f, 0774)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not create Logger")
 	}
@@ -119,13 +125,14 @@ func (lg *LogGroup) AddFolderLog(k, fol string) error {
 	lg.Lock()
 	fl, err := NewFolderLog(fol)
 	if err != nil {
-		return errors.Wrap(err)
+		return errors.Wrap(err, "Could not Add folder log")
 	}
-	lg.logs[k] = &Logger{Folder: v}
+	lg.logs[k] = fl
 	lg.Unlock()
+	return nil
 }
 
-func (lg *LogGroup) Log(m) {
+func (lg *LogGroup) Log(m string) {
 	lg.main.Log(m)
 }
 
@@ -133,9 +140,9 @@ func (lg *LogGroup) LogTo(k, m string) {
 	lg.Lock()
 	defer lg.Unlock()
 
-	lg.main.Log(k + m)
+	go lg.main.Log(k + m)
 	mini, ok := lg.logs[k]
 	if ok {
-		mini.Log(m)
+		go mini.Log(m)
 	}
 }
