@@ -83,7 +83,7 @@ func (sc *SessionControl) GetLogin(w http.ResponseWriter, r *http.Request) (Sess
 	return dt, OK
 }
 
-func (sc *SessionControl) EditLogin(r *http.Request, data interface{}) err {
+func (sc *SessionControl) EditLogin(r *http.Request, data interface{}) error {
 	c, err := r.Cookie("Session")
 	if err != nil {
 		return errors.New("No Login cookie")
@@ -92,6 +92,9 @@ func (sc *SessionControl) EditLogin(r *http.Request, data interface{}) err {
 	defer sc.Unlock()
 
 	sdat, ok := sc.sessions[c.Value]
+	if !ok {
+		return errors.New("Nothing to edit")
+	}
 	sdat.Data = data
 	sdat.LastAccess = time.Now()
 	return nil
