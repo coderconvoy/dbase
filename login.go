@@ -1,6 +1,7 @@
 package dbase2
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -80,6 +81,20 @@ func (sc *SessionControl) GetLogin(w http.ResponseWriter, r *http.Request) (Sess
 	dt.LastAccess = time.Now()
 	sc.sessions[c.Value] = dt
 	return dt, OK
+}
+
+func (sc *SessionControl) EditLogin(r *http.Request, data interface{}) err {
+	c, err := r.Cookie("Session")
+	if err != nil {
+		return errors.New("No Login cookie")
+	}
+	sc.Lock()
+	defer sc.Unlock()
+
+	sdat, ok := sc.sessions[c.Value]
+	sdat.Data = data
+	sdat.LastAccess = time.Now()
+	return nil
 }
 
 func (sc *SessionControl) Logout(w http.ResponseWriter, r *http.Request) {

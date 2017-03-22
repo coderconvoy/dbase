@@ -21,6 +21,9 @@ func NewPassword(pw string) (Password, error) {
 
 }
 func (p Password) Check(pw string) bool {
+	if pw == "" {
+		return false
+	}
 	dk, err := scrypt.Key([]byte(pw), p.Salt, 16384, 8, 1, 32)
 	if err != nil {
 		return false
