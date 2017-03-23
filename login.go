@@ -97,6 +97,7 @@ func (sc *SessionControl) EditLogin(r *http.Request, data interface{}) error {
 	}
 	sdat.Data = data
 	sdat.LastAccess = time.Now()
+	sc.sessions[c.Value] = sdat
 	return nil
 }
 
