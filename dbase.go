@@ -1,4 +1,4 @@
-package dbase2
+package dbase
 
 import (
 	"encoding/hex"
