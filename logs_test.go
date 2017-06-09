@@ -22,7 +22,7 @@ func Test_SetQLogger(t *testing.T) {
 	QLog("Hello")
 	QLog("Goodbye")
 	if len(tlog.logs) != 2 {
-		t.Log("logs should have 2 messages")
+		t.Logf("logs should have 2 messages, got %d", len(tlog.logs))
 		t.Fail()
 	}
 }

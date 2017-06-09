@@ -29,7 +29,7 @@ var dlog Logger
 
 // QLog provides a quick log method, that requieres no setup to allow simple logging
 // If you want more fancy stuff, Use a LogGroup
-func QLog(m string) error {
+func Log(m string) error {
 	if dlog == nil {
 		var err error
 		dlog, err = NewLogGroup("logs")
@@ -39,6 +39,46 @@ func QLog(m string) error {
 	}
 	dlog.Log(m)
 	return nil
+}
+
+// QLog will Log anything you give it by running various methods to get at the contents as depending.
+func QLog(d ...interface{}) {
+	type caused interface {
+		Cause() error
+	}
+	logstr := ""
+	for i, v := range d {
+		switch t := v.(type) {
+		case error:
+			logstr += "\nERROR:---"
+			for t != nil {
+				cause, ok := t.(caused)
+				if !ok {
+					break
+				}
+				logstr += t.Error() + "---"
+				t = cause.Cause()
+			}
+		case string:
+			if i != 0 {
+				logstr += "\n"
+			}
+			logstr += t
+		case fmt.Stringer:
+			if i != 0 {
+				logstr += "\n"
+			}
+			logstr += t.String()
+		default:
+			logstr += "UnStringable thing"
+		}
+	}
+	Log(logstr)
+}
+
+func QLogf(s string, d ...interface{}) {
+	combi := fmt.Sprintf(s, d...)
+	Log(combi)
 }
 
 // SetQLogFolder changes the default folder for QLog default "logs"
