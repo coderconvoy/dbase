@@ -27,7 +27,7 @@ type FolderLog struct {
 
 var dlog Logger
 
-// QLog provides a quick log method, that requieres no setup to allow simple logging
+// Log provides a quick log method, that requieres no setup to allow simple logging
 // If you want more fancy stuff, Use a LogGroup
 func Log(m string) error {
 	if dlog == nil {
@@ -52,11 +52,11 @@ func QLog(d ...interface{}) {
 		case error:
 			logstr += "\nERROR:---"
 			for t != nil {
+				logstr += t.Error() + "---"
 				cause, ok := t.(caused)
 				if !ok {
 					break
 				}
-				logstr += t.Error() + "---"
 				t = cause.Cause()
 			}
 		case string:
